@@ -1,13 +1,9 @@
 package org.schabi.newpipe.util;
 
-import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 
 import androidx.annotation.DrawableRes;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.preference.PreferenceManager;
 
@@ -22,8 +18,9 @@ import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.services.peertube.PeertubeInstance;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
 
 public final class ServiceHelper {
     private static final StreamingService DEFAULT_FALLBACK_SERVICE = ServiceList.YouTube;
@@ -116,32 +113,18 @@ public final class ServiceHelper {
     }
 
     public static int getSelectedServiceId(final Context context) {
-        return Optional.ofNullable(getSelectedService(context))
-                .orElse(DEFAULT_FALLBACK_SERVICE)
-                .getServiceId();
-    }
-
-    @Nullable
-    public static StreamingService getSelectedService(final Context context) {
         final String serviceName = PreferenceManager.getDefaultSharedPreferences(context)
                 .getString(context.getString(R.string.current_service_key),
                         context.getString(R.string.default_service_value));
 
+        int serviceId;
         try {
-            return NewPipe.getService(serviceName);
+            serviceId = NewPipe.getService(serviceName).getServiceId();
         } catch (final ExtractionException e) {
-            return null;
+            serviceId = DEFAULT_FALLBACK_SERVICE.getServiceId();
         }
-    }
 
-    @NonNull
-    public static String getNameOfServiceById(final int serviceId) {
-        return ServiceList.all().stream()
-                .filter(s -> s.getServiceId() == serviceId)
-                .findFirst()
-                .map(StreamingService::getServiceInfo)
-                .map(StreamingService.ServiceInfo::getName)
-                .orElse("<unknown>");
+        return serviceId;
     }
 
     public static void setSelectedServiceId(final Context context, final int serviceId) {
@@ -153,6 +136,16 @@ public final class ServiceHelper {
         }
 
         setSelectedServicePreferences(context, serviceName);
+    }
+
+    public static void setSelectedServiceId(final Context context, final String serviceName) {
+        final int serviceId = NewPipe.getIdOfService(serviceName);
+        if (serviceId == -1) {
+            setSelectedServicePreferences(context,
+                    DEFAULT_FALLBACK_SERVICE.getServiceInfo().getName());
+        } else {
+            setSelectedServicePreferences(context, serviceName);
+        }
     }
 
     private static void setSelectedServicePreferences(final Context context,
